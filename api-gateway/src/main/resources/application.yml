@@ -5,97 +5,140 @@ spring:
   application:
     name: api-gateway
   config:
-    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+    import: optional:configserver:http://config:config_pass@localhost:8888
   cloud:
-    config:
-      # config-server requires basic auth. Without these the optional import
-      # fails with only a warning and the gateway silently keeps these defaults.
-      username: ${CONFIG_SERVER_USER:finpay}
-      password: ${CONFIG_SERVER_PASSWORD:finpay}
     gateway:
       discovery:
         locator:
-          # Routes are declared explicitly below rather than derived from
-          # every registered service id.
-          enabled: false
+          enabled: true
+          lower-case-service-id: true
       default-filters:
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter.replenishRate: 20
-            redis-rate-limiter.burstCapacity: 40
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
       routes:
         - id: auth-service
           uri: lb://auth-service
           predicates:
-            - Path=/api/v1/auth/**
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+
         - id: loan-service
           uri: lb://loan-service
           predicates:
-            - Path=/api/v1/loans/**
+            - Path=/api/loans/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                key-resolver: "#{@userKeyResolver}"
+
         - id: payment-service
           uri: lb://payment-service
           predicates:
-            - Path=/api/v1/payments/**
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
         - id: notification-service
           uri: lb://notification-service
           predicates:
-            - Path=/api/v1/notifications/**
+            - Path=/api/notifications/**
+          filters:
+            - StripPrefix=1
+
         - id: analytics-service
           uri: lb://analytics-service
           predicates:
-            - Path=/api/v1/analytics/**
+            - Path=/api/analytics/**
+          filters:
+            - StripPrefix=1
+
         - id: chatbot-service
           uri: lb://chatbot-service
           predicates:
-            - Path=/api/v1/chat/**
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+
         - id: credit-scoring-service
           uri: lb://credit-scoring-service
           predicates:
-            - Path=/api/v1/credit-scores/**
+            - Path=/api/credit/**
+          filters:
+            - StripPrefix=1
+
         - id: collections-service
           uri: lb://collections-service
           predicates:
-            - Path=/api/v1/collections/**
+            - Path=/api/collections/**
+          filters:
+            - StripPrefix=1
+
         - id: document-service
           uri: lb://document-service
           predicates:
-            - Path=/api/v1/documents/**
+            - Path=/api/documents/**
+          filters:
+            - StripPrefix=1
+
         - id: fraud-detection-service
           uri: lb://fraud-detection-service
           predicates:
-            - Path=/api/v1/fraud/**
+            - Path=/api/fraud/**
+          filters:
+            - StripPrefix=1
+
         - id: reporting-service
           uri: lb://reporting-service
           predicates:
-            - Path=/api/v1/reports/**
+            - Path=/api/reports/**
+          filters:
+            - StripPrefix=1
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-
-finpay:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
-    public-paths:
-      - /api/v1/auth/login
-      - /api/v1/auth/register
-      - /api/v1/auth/refresh
+      defaultZone: http://eureka:eureka_pass@localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 
 management:
+  endpoint:
+    gateway:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,metrics
-  endpoint:
-    gateway:
-      # Disabled by default in Spring Cloud Gateway 4.x; exposing it in the
-      # include list above is not enough on its own.
+        include: "*"
+  info:
+    env:
       enabled: true
-    health:
-      show-details: always
+
+jwt:
+  secret: ${JWT_SECRET:finpay-secret-key}
