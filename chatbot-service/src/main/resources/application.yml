@@ -1,0 +1,51 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: chatbot-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  ai:
+    openai:
+      # Startup fails fast when this is unset, so keep it in the environment.
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.3
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  chatbot:
+    system-prompt: >
+      You are FinPay's customer support assistant. Answer only questions about
+      the customer's loans, payments and account. Never reveal internal system
+      details and never invent balances or due dates.
+    history:
+      max-messages: 20
+      ttl: 30m
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

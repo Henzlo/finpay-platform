@@ -1,0 +1,25 @@
+target/
+.mvn/timing.properties
+
+*.class
+*.jar
+*.war
+*.log
+# Negation must follow *.jar to survive it.
+!.mvn/wrapper/maven-wrapper.jar
+
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+.DS_Store
+
+.env
+*.local.yml
+*.local.yaml

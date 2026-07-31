@@ -1,0 +1,60 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: collections-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:finpay_collections}
+    username: ${POSTGRES_USER:finpay}
+    password: ${POSTGRES_PASSWORD:finpay}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Scaffolding default for local development. Switch to "validate" and manage
+      # the schema with Flyway or Liquibase before any shared environment.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: collections-service
+      auto-offset-reset: earliest
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
+  collections:
+    delinquency-buckets: 0-30,31-60,61-90,90+
+    dunning-cron: "0 0 9 * * *"
+  kafka:
+    topics:
+      payment-events: finpay.payment.events
+      collection-events: finpay.collection.events
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

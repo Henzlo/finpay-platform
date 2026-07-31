@@ -1,0 +1,64 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: credit-scoring-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:finpay_credit}
+    username: ${POSTGRES_USER:finpay}
+    password: ${POSTGRES_PASSWORD:finpay}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Scaffolding default for local development. Switch to "validate" and manage
+      # the schema with Flyway or Liquibase before any shared environment.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 6h
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
+  credit-scoring:
+    bureau:
+      base-url: ${BUREAU_BASE_URL:https://sandbox.bureau.example.com}
+      api-key: ${BUREAU_API_KEY:}
+      timeout: 5s
+    score-range:
+      min: 300
+      max: 900
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

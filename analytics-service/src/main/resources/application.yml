@@ -1,0 +1,57 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: analytics-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/finpay_analytics}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 5m
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: analytics-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.finpay.*
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  analytics:
+    rollup-interval: 15m
+  kafka:
+    topics:
+      loan-events: finpay.loan.events
+      payment-events: finpay.payment.events
+      collection-events: finpay.collection.events
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

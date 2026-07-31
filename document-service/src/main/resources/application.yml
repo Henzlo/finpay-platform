@@ -1,0 +1,52 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: document-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/finpay_documents}
+      # GridFS bucket for the uploaded binaries.
+      gridfs:
+        bucket: finpay_kyc
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
+  document:
+    allowed-content-types: application/pdf,image/jpeg,image/png
+    retention: 3650d
+  kafka:
+    topics:
+      document-events: finpay.document.events
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

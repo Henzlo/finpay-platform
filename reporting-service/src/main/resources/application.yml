@@ -1,0 +1,56 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: reporting-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the service silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:finpay_reporting}
+    username: ${POSTGRES_USER:finpay}
+    password: ${POSTGRES_PASSWORD:finpay}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Scaffolding default for local development. Switch to "validate" and manage
+      # the schema with Flyway or Liquibase before any shared environment.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/finpay_reporting}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
+  reporting:
+    output-formats: PDF,CSV,XLSX
+    schedules:
+      daily-cron: "0 30 1 * * *"
+      monthly-cron: "0 0 2 1 * *"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

@@ -1,0 +1,101 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    config:
+      # config-server requires basic auth. Without these the optional import
+      # fails with only a warning and the gateway silently keeps these defaults.
+      username: ${CONFIG_SERVER_USER:finpay}
+      password: ${CONFIG_SERVER_PASSWORD:finpay}
+    gateway:
+      discovery:
+        locator:
+          # Routes are declared explicitly below rather than derived from
+          # every registered service id.
+          enabled: false
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 20
+            redis-rate-limiter.burstCapacity: 40
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: loan-service
+          uri: lb://loan-service
+          predicates:
+            - Path=/api/v1/loans/**
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/v1/analytics/**
+        - id: chatbot-service
+          uri: lb://chatbot-service
+          predicates:
+            - Path=/api/v1/chat/**
+        - id: credit-scoring-service
+          uri: lb://credit-scoring-service
+          predicates:
+            - Path=/api/v1/credit-scores/**
+        - id: collections-service
+          uri: lb://collections-service
+          predicates:
+            - Path=/api/v1/collections/**
+        - id: document-service
+          uri: lb://document-service
+          predicates:
+            - Path=/api/v1/documents/**
+        - id: fraud-detection-service
+          uri: lb://fraud-detection-service
+          predicates:
+            - Path=/api/v1/fraud/**
+        - id: reporting-service
+          uri: lb://reporting-service
+          predicates:
+            - Path=/api/v1/reports/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+finpay:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
+    public-paths:
+      - /api/v1/auth/login
+      - /api/v1/auth/register
+      - /api/v1/auth/refresh
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,metrics
+  endpoint:
+    gateway:
+      # Disabled by default in Spring Cloud Gateway 4.x; exposing it in the
+      # include list above is not enough on its own.
+      enabled: true
+    health:
+      show-details: always
