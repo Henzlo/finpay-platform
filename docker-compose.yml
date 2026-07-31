@@ -1,0 +1,178 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: finpay-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: finpay_db
+      POSTGRES_USER: finpay_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finpay_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finpay_user -d finpay_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - finpay-network
+
+  mongo:
+    image: mongo:7
+    container_name: finpay-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - finpay-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: finpay-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - finpay-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: finpay-zookeeper
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - finpay-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: finpay-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    depends_on:
+      zookeeper:
+        condition: service_started
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Dual listeners so host apps use localhost:9092 while containers
+      # (Kafka UI, other compose services) use kafka:29092. A single
+      # PLAINTEXT://localhost:9092 advertised address breaks in-network clients.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    networks:
+      - finpay-network
+
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: finpay-elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - finpay-network
+
+  kibana:
+    image: kibana:8.11.0
+    container_name: finpay-kibana
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks:
+      - finpay-network
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: finpay-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    healthcheck:
+      # Zipkin's image ships wget, not curl.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9411/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - finpay-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: finpay-kafka-ui
+    restart: unless-stopped
+    ports:
+      # Host 8090 collides with fraud-detection-service's default port when that
+      # service is also running locally; stop one or remap if you hit a bind error.
+      - "8090:8080"
+    depends_on:
+      kafka:
+        condition: service_started
+    environment:
+      KAFKA_CLUSTERS_0_NAME: finpay-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - finpay-network
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  elasticsearch_data:
+
+networks:
+  finpay-network:
+    driver: bridge
+    name: finpay-network

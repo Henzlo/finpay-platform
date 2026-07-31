@@ -1,0 +1,54 @@
+# Local-only overrides. Docker Compose merges this automatically with
+# docker-compose.yml when you run `docker compose up` from this directory.
+# Do not deploy this file to shared environments.
+
+services:
+  postgres:
+    environment:
+      LOG_LEVEL: DEBUG
+    volumes:
+      # Creates the per-service databases the Spring modules expect on first boot.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  mongo:
+    environment:
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./docker/mongo/init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    environment:
+      LOG_LEVEL: DEBUG
+    command: redis-server --appendonly yes --loglevel verbose
+
+  zookeeper:
+    environment:
+      LOG_LEVEL: DEBUG
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: DEBUG
+
+  kafka:
+    environment:
+      LOG_LEVEL: DEBUG
+      KAFKA_LOG4J_LOGGERS: kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO
+      KAFKA_LOG4J_ROOT_LOGLEVEL: DEBUG
+
+  elasticsearch:
+    environment:
+      LOG_LEVEL: DEBUG
+      logger.level: DEBUG
+
+  kibana:
+    environment:
+      LOG_LEVEL: DEBUG
+      LOGGING_ROOT_LEVEL: debug
+
+  zipkin:
+    environment:
+      LOG_LEVEL: DEBUG
+      JAVA_OPTS: "-Dlogging.level.zipkin2=DEBUG"
+
+  kafka-ui:
+    environment:
+      LOG_LEVEL: DEBUG
+      LOGGING_LEVEL_ROOT: DEBUG
+      LOGGING_LEVEL_COM_PROVECTUS: DEBUG
