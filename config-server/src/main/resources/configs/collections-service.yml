@@ -1,0 +1,7 @@
+server:
+  port: 8088
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/finpay_db
+    username: ${DB_USERNAME:finpay_user}
+    password: ${DB_PASSWORD:finpay_pass}

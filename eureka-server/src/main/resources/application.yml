@@ -4,17 +4,21 @@ server:
 spring:
   application:
     name: eureka-server
+  security:
+    user:
+      name: eureka
+      password: ${EUREKA_PASSWORD:eureka_pass}
 
 eureka:
   instance:
     hostname: localhost
   client:
-    # The registry does not register with itself.
     register-with-eureka: false
     fetch-registry: false
+    service-url:
+      defaultZone: http://eureka:${EUREKA_PASSWORD:eureka_pass}@localhost:8761/eureka/
   server:
-    # Disabled for local development so a small number of instances is not
-    # mistaken for a network partition.
+    wait-time-in-ms-when-sync-empty: 0
     enable-self-preservation: false
 
 management:
@@ -22,8 +26,6 @@ management:
     web:
       exposure:
         include: health,info,metrics
-
-logging:
-  level:
-    com.netflix.eureka: INFO
-    com.netflix.discovery: INFO
+  endpoint:
+    health:
+      show-details: always

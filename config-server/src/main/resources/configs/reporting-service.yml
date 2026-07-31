@@ -1,0 +1,10 @@
+server:
+  port: 8091
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/finpay_db
+    username: ${DB_USERNAME:finpay_user}
+    password: ${DB_PASSWORD:finpay_pass}
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/finpay_reports

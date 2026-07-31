@@ -1,0 +1,13 @@
+server:
+  port: 8086
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:placeholder}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/finpay_chatbot

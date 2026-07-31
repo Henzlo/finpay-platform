@@ -1,0 +1,10 @@
+server:
+  port: 8089
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/finpay_documents
+aws:
+  s3:
+    bucket: ${S3_BUCKET:finpay-docs-local}
+    region: ${AWS_REGION:ap-south-1}
