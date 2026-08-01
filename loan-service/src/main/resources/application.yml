@@ -5,55 +5,56 @@ spring:
   application:
     name: loan-service
   config:
-    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
-  cloud:
-    config:
-      # config-server requires basic auth. Without these the optional import
-      # fails with only a warning and the service silently keeps these defaults.
-      username: ${CONFIG_SERVER_USER:finpay}
-      password: ${CONFIG_SERVER_PASSWORD:finpay}
+    import: optional:configserver:http://config:config_pass@localhost:8888
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:finpay_loans}
-    username: ${POSTGRES_USER:finpay}
-    password: ${POSTGRES_PASSWORD:finpay}
+    url: jdbc:postgresql://localhost:5432/finpay_db
+    username: finpay_user
+    password: finpay_pass
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      # Scaffolding default for local development. Switch to "validate" and manage
-      # the schema with Flyway or Liquibase before any shared environment.
       ddl-auto: update
-    open-in-view: false
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      group-id: loan-service
+      group-id: loan-service-group
       auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-
-finpay:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
-  loan:
-    max-principal: 5000000
-    min-credit-score: 600
-  kafka:
-    topics:
-      loan-events: finpay.loan.events
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+      defaultZone: http://eureka:eureka_pass@localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      creditService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
