@@ -5,59 +5,61 @@ spring:
   application:
     name: auth-service
   config:
-    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
-  cloud:
-    config:
-      # config-server requires basic auth. Without these the optional import
-      # fails with only a warning and the service silently keeps these defaults.
-      username: ${CONFIG_SERVER_USER:finpay}
-      password: ${CONFIG_SERVER_PASSWORD:finpay}
+    import: optional:configserver:http://config:config_pass@localhost:8888
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:finpay_auth}
-    username: ${POSTGRES_USER:finpay}
-    password: ${POSTGRES_PASSWORD:finpay}
+    url: jdbc:postgresql://localhost:5432/finpay_db
+    username: finpay_user
+    password: finpay_pass
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      # Scaffolding default for local development. Switch to "validate" and manage
-      # the schema with Flyway or Liquibase before any shared environment.
       ddl-auto: update
-    open-in-view: false
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      host: localhost
+      port: 6379
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:test@gmail.com}
+    password: ${MAIL_PASSWORD:testpass}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+      defaultZone: http://eureka:eureka_pass@localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 
-finpay:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
-      access-token-ttl: 15m
-      refresh-token-ttl: 7d
-      issuer: finpay-auth
-  kafka:
-    topics:
-      user-events: finpay.user.events
+jwt:
+  secret: ${JWT_SECRET:finpay-secret-key}
+  expiration: 3600000
+  refresh-expiration: 604800000
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID:your-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-secret}
+    redirect-uri: http://localhost:3000/auth/google/callback
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
