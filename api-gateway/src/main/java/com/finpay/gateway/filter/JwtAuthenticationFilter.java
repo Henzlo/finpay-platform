@@ -28,7 +28,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
             "/api/auth/verify-email",
             "/api/auth/forgot-password",
             "/api/auth/refresh-token",
-            "/api/loans/calculate-emi"
+            "/api/loans/calculate-emi",
+            "/api/ai/chat/quick"
     );
 
     private final JwtUtil jwtUtil;
