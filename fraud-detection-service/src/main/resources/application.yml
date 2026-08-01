@@ -1,61 +1,56 @@
 server:
-  port: 8090
+  port: 8092
 
 spring:
   application:
     name: fraud-detection-service
   config:
-    import: optional:configserver:${CONFIG_SERVER_URI:http://localhost:8888}
-  cloud:
-    config:
-      # config-server requires basic auth. Without these the optional import
-      # fails with only a warning and the service silently keeps these defaults.
-      username: ${CONFIG_SERVER_USER:finpay}
-      password: ${CONFIG_SERVER_PASSWORD:finpay}
+    import: optional:configserver:http://config:config_pass@localhost:8888
+  datasource:
+    url: jdbc:postgresql://localhost:5432/finpay_db
+    username: finpay_user
+    password: finpay_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
   data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/finpay_fraud}
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: localhost
+      port: 6379
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092
     consumer:
-      group-id: fraud-detection-service
+      group-id: fraud-detection-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.finpay.*
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
-
-finpay:
-  security:
-    jwt:
-      secret: ${JWT_SECRET:Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tdGhpcy1pcy1hLWRlbW8ta2V5}
-  fraud:
-    # Scores at or above review-threshold are queued for a human decision;
-    # block-threshold declines the transaction outright.
-    review-threshold: 60
-    block-threshold: 85
-    velocity:
-      window: 10m
-      max-transactions: 10
-  kafka:
-    topics:
-      payment-events: finpay.payment.events
-      fraud-alerts: finpay.fraud.alerts
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+      defaultZone: http://eureka:eureka_pass@localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+fraud:
+  rules:
+    max-applications-per-day: 3
+    max-amount-threshold: 1000000
+    suspicious-hour-start: 2
+    suspicious-hour-end: 5
+    velocity-window-minutes: 60
+    max-requests-per-window: 5
